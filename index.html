@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="A simple frontend for the Secure Notes REST API.">
+  <title>Secure Notes</title>
+  <link rel="stylesheet" href="styles.css">
+  <script type="module" src="app.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <header class="site-header">
+    <a class="brand" href="#notes"><span class="brand-icon" aria-hidden="true">N</span><span>Secure Notes<small>Your notes, in one place.</small></span></a>
+    <div class="account"><span id="account-label">Not signed in</span><button id="logout-button" type="button" class="secondary" hidden>Sign out</button></div>
+  </header>
+
+  <details class="connection-settings" id="connection-settings">
+    <summary>API connection <span id="connection-label"></span></summary>
+    <form id="connection-form" class="connection-form">
+      <label>API base URL<input id="api-base" type="url" required spellcheck="false" aria-describedby="api-help"></label>
+      <div class="button-row"><button type="submit">Save connection</button><button type="button" class="secondary" id="connection-test">Test connection</button></div>
+      <p class="help" id="api-help">Local API: http://localhost:4000/api/v1. Changing the API signs you out. Allow this page's origin in the backend CORS_ORIGIN setting.</p>
+      <p id="connection-result" class="help" role="status"></p>
+    </form>
+  </details>
+
+  <div class="app-layout">
+    <aside class="sidebar">
+      <p class="nav-heading">Workspace</p>
+      <nav aria-label="Main navigation">
+        <a href="#login" data-route="login" id="login-link">Sign in</a>
+        <a href="#notes" data-route="notes" data-auth hidden>My notes</a>
+        <a href="#posts" data-route="posts">Public posts</a>
+        <a href="#profile" data-route="profile" data-auth hidden>My profile</a>
+        <p class="nav-heading" data-admin hidden>Administration</p>
+        <a href="#all-notes" data-route="all-notes" data-admin hidden>Everyone's notes</a>
+        <a href="#users" data-route="users" data-admin hidden>Manage users</a>
+        <a href="#interests" data-route="interests" data-admin hidden>Users by interest</a>
+      </nav>
+      <p class="sidebar-note">Private notes.<br>Public ideas.</p>
+    </aside>
+
+    <main id="main" tabindex="-1">
+      <div id="notice" class="notice" role="status" aria-live="polite" hidden><span id="notice-text"></span><button type="button" id="notice-dismiss" aria-label="Dismiss message">×</button></div>
+
+      <section data-view="login" id="login-view">
+        <div class="page-heading"><div><p class="eyebrow">Welcome</p><h1>Your own space to think.</h1><p class="muted">Sign in to manage your private notes. Public posts are available to everyone.</p></div></div>
+        <div class="auth-card panel">
+          <div class="auth-switch" role="group" aria-label="Account options"><button type="button" id="show-login" aria-pressed="true">Sign in</button><button type="button" id="show-register" class="secondary" aria-pressed="false">Create account</button></div>
+          <form id="login-form" class="stack">
+            <h2>Sign in</h2>
+            <label>Email<input name="email" type="email" required autocomplete="username" maxlength="254"></label>
+            <label>Password<input name="password" type="password" required autocomplete="current-password" maxlength="72"></label>
+            <button type="submit">Sign in</button>
+            <p class="help">Use your application account, not your MongoDB or SSH credentials.</p>
+          </form>
+          <form id="register-form" class="stack" hidden>
+            <h2>Create an account</h2>
+            <label>Name<input name="name" required maxlength="100" autocomplete="name"></label>
+            <label>Email<input name="email" type="email" required maxlength="254" autocomplete="email"></label>
+            <label>Password<input name="password" type="password" required minlength="12" maxlength="72" autocomplete="new-password" aria-describedby="register-password-help"></label>
+            <p id="register-password-help" class="help">At least 12 characters, up to 72 UTF-8 bytes.</p>
+            <label>Interests <span class="optional">optional</span><input name="interests" placeholder="chess, reading, coding" aria-describedby="register-interests-help"></label>
+            <p class="help" id="register-interests-help">Separate interests with commas. New accounts have the User role.</p>
+            <button type="submit">Create account</button>
+          </form>
+        </div>
+      </section>
+
+      <section data-view="notes" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Workspace</p><h1>My notes</h1><p class="muted">Only you can edit your notes.</p></div><button type="button" id="new-note">+ New note</button></div>
+        <div class="list-toolbar"><span id="notes-summary" class="muted"></span><button type="button" class="secondary small" data-refresh="notes">Refresh</button></div>
+        <div id="notes-list" class="card-grid" aria-live="polite"></div><div id="notes-pagination" class="pagination"></div>
+      </section>
+
+      <section data-view="posts" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Community</p><h1>Public posts</h1><p class="muted">Read posts by any user, or share something of your own.</p></div><button type="button" id="new-post" data-auth hidden>+ Write a post</button></div>
+        <form id="author-form" class="panel author-form"><label>User ID<input id="author-id" name="authorId" required pattern="[a-fA-F0-9]{24}" maxlength="24" spellcheck="false" placeholder="Enter a user's 24-character ID"></label><button type="submit">Load posts</button><button type="button" class="secondary" id="my-posts" data-auth hidden>My posts</button><p class="help">Posts are public. Ask an author for their user ID; yours appears in My profile.</p></form>
+        <h2 id="posts-heading">Choose an author</h2><div id="posts-list" class="card-grid" aria-live="polite"><p class="empty">Enter a user ID above to see their public posts.</p></div><div id="posts-pagination" class="pagination"></div>
+      </section>
+
+      <section data-view="profile" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Account</p><h1>My profile</h1><p class="muted">Your current account and permissions.</p></div><button type="button" class="secondary" data-refresh="profile">Refresh profile</button></div>
+        <div id="profile-details" class="panel"></div>
+      </section>
+
+      <section data-view="all-notes" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Administration</p><h1>Everyone's notes</h1><p class="muted">Admin access lets you read all notes. Other users' notes remain read-only.</p></div></div>
+        <div class="list-toolbar"><span id="all-notes-summary" class="muted"></span><button type="button" class="secondary small" data-refresh="all-notes">Refresh</button></div>
+        <div id="all-notes-list" class="card-grid" aria-live="polite"></div><div id="all-notes-pagination" class="pagination"></div>
+      </section>
+
+      <section data-view="users" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Administration</p><h1>Manage users</h1><p class="muted">Add accounts and update their roles and profiles.</p></div><button type="button" id="new-user">+ Add user</button></div>
+        <div class="list-toolbar"><span id="users-summary" class="muted"></span><button type="button" class="secondary small" data-refresh="users">Refresh</button></div>
+        <div id="users-list" class="panel table-wrap" aria-live="polite"></div><div id="users-pagination" class="pagination"></div>
+        <p class="help">The backend rejects deletion of accounts that own notes or posts, and protects the final admin.</p>
+      </section>
+
+      <section data-view="interests" hidden>
+        <div class="page-heading"><div><p class="eyebrow">Administration</p><h1>Users by interest</h1><p class="muted">Explore the interests your users share.</p></div><button type="button" class="secondary" data-refresh="interests">Refresh</button></div>
+        <p id="interests-summary" class="muted"></p><div id="interests-list" class="card-grid" aria-live="polite"></div><div id="interests-pagination" class="pagination"></div>
+      </section>
+
+      <footer class="workspace-footer"><span>Secure Notes</span><label id="page-size-label">Items per page<select id="page-size"><option>5</option><option selected>10</option><option>20</option><option>50</option></select></label></footer>
+    </main>
+  </div>
+
+  <dialog id="note-dialog" aria-labelledby="note-dialog-title"><form id="note-form" class="stack"><div class="dialog-heading"><h2 id="note-dialog-title">New note</h2><button type="button" class="close-button" data-close="note-dialog" aria-label="Close note editor">×</button></div><input name="id" type="hidden"><label>Title<input name="title" required maxlength="200"></label><label>Content<textarea name="content" required maxlength="50000" rows="10"></textarea></label><p class="form-error" role="alert" hidden></p><div class="button-row"><button type="submit">Save note</button><button type="button" class="secondary" data-close="note-dialog">Cancel</button></div></form></dialog>
+
+  <dialog id="post-dialog" aria-labelledby="post-dialog-title"><form id="post-form" class="stack"><div class="dialog-heading"><h2 id="post-dialog-title">Write a public post</h2><button type="button" class="close-button" data-close="post-dialog" aria-label="Close post editor">×</button></div><p class="help">Posts can be read by everyone. The current API supports creating posts, but does not provide post editing or deletion.</p><label>Title<input name="title" required maxlength="200"></label><label>Content<textarea name="content" required maxlength="50000" rows="10"></textarea></label><p class="form-error" role="alert" hidden></p><div class="button-row"><button type="submit">Publish post</button><button type="button" class="secondary" data-close="post-dialog">Cancel</button></div></form></dialog>
+
+  <dialog id="user-dialog" aria-labelledby="user-dialog-title"><form id="user-form" class="stack"><div class="dialog-heading"><h2 id="user-dialog-title">Add user</h2><button type="button" class="close-button" data-close="user-dialog" aria-label="Close user editor">×</button></div><input name="id" type="hidden"><label>Name<input name="name" required maxlength="100" autocomplete="off"></label><label>Email<input name="email" required type="email" maxlength="254" autocomplete="off"></label><label>Password<input name="password" type="password" minlength="12" maxlength="72" autocomplete="new-password" aria-describedby="user-password-help"></label><p id="user-password-help" class="help">At least 12 characters. Leave blank when editing to keep the current password.</p><label>Role<select name="role"><option value="USER">User</option><option value="ADMIN">Admin</option></select></label><label>Interests<input name="interests" placeholder="chess, reading, coding"></label><p class="form-error" role="alert" hidden></p><div class="button-row"><button type="submit">Save user</button><button type="button" class="secondary" data-close="user-dialog">Cancel</button></div></form></dialog>
+
+  <dialog id="detail-dialog" aria-labelledby="detail-title"><div class="dialog-heading"><h2 id="detail-title">Details</h2><button type="button" class="close-button" data-close="detail-dialog" aria-label="Close details">×</button></div><div id="detail-body"></div><div class="button-row"><button type="button" class="secondary" data-close="detail-dialog">Close</button></div></dialog>
+  <noscript><p class="notice">Enable JavaScript to sign in and use this application.</p></noscript>
+</body>
+</html>
