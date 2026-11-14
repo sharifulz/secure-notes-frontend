@@ -184,6 +184,7 @@ async function renderRoute() {
   const controller = new AbortController();
   state.controller = controller;
   state.route = route;
+  document.body.classList.toggle('login-layout', route === 'login');
   $$('[data-view]').forEach(section => { section.hidden = section.dataset.view !== route; });
   $$('[data-route]').forEach(link => {
     if (link.dataset.route === route) link.setAttribute('aria-current', 'page');
@@ -515,33 +516,6 @@ formAction($('#user-form'), async data => {
 
 formAction($('#author-form'), async data => { showAuthor(data.get('authorId').trim()); });
 
-formAction($('#connection-form'), async data => {
-  const next = normalizeApiBase($('#api-base').value);
-  if (next === apiBase) { notify('The API connection is unchanged.'); return; }
-  signOut('API connection updated. Sign in to the selected server.');
-  apiBase = next;
-  try { localStorage.setItem('secure-notes.api', apiBase); } catch { /* Remain usable without persistent storage. */ }
-  $('#api-base').value = apiBase;
-  $('#connection-label').textContent = apiBase;
-  $('#connection-result').textContent = '';
-});
-
-$('#connection-test').addEventListener('click', event => void buttonAction(event.currentTarget, async () => {
-  const base = normalizeApiBase($('#api-base').value);
-  const health = new URL(base); health.pathname = '/health';
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 10000);
-  $('#connection-result').textContent = 'Checking…';
-  try {
-    const response = await fetch(health, { signal: controller.signal, credentials: 'omit', cache: 'no-store' });
-    const payload = await response.json();
-    if (!response.ok || payload?.data?.status !== 'ok') throw new Error('The server did not return the expected health response.');
-    $('#connection-result').textContent = 'API is reachable. Health check passed.';
-  } catch {
-    $('#connection-result').textContent = `Connection failed. Check the URL, server, certificate, and CORS_ORIGIN=${location.origin}.`;
-  } finally { clearTimeout(timeout); }
-}));
-
 $('#new-note').addEventListener('click', () => { if (openDialog('note-dialog')) $('#note-dialog-title').textContent = 'New note'; });
 $('#new-post').addEventListener('click', () => openDialog('post-dialog'));
 $('#new-user').addEventListener('click', () => {
@@ -562,7 +536,5 @@ $('#page-size').addEventListener('change', () => {
   void renderRoute();
 });
 window.addEventListener('hashchange', () => void renderRoute());
-$('#api-base').value = apiBase;
-$('#connection-label').textContent = apiBase;
 updateAccount();
 void renderRoute();
