@@ -1,0 +1,3 @@
+In Gitbash:
+Location: SecureNoteFrontEnd
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ./deploy-frontend.ps1
